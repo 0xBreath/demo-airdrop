@@ -8236,8 +8236,8 @@ function keccak256(str) {
 
 },{"randombytes":"8hjhE","@babel/runtime/helpers/defineProperty":"4x6r7","base64url":"5xeES","keccak":"cOBab","buffer":"dIvfM","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8hjhE":[function(require,module,exports) {
 'use strict';
-var global = arguments[3];
 var process = require("process");
+var global = arguments[3];
 // limit of Crypto.getRandomValues()
 // https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues
 var MAX_BYTES = 65536;

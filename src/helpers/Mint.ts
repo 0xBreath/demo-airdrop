@@ -8,7 +8,7 @@ import {
 } from '@solana/spl-token';
 import { 
     TOKEN_METADATA_PROGRAM_ID,
-} from '../../utils/constants';
+} from '../utils/constants';
 import { Token } from '@solana/spl-token';
 import { web3, Provider } from '@project-serum/anchor';
 

@@ -45556,8 +45556,8 @@ SafeBuffer.allocUnsafeSlow = function(size) {
 
 },{"buffer":"dIvfM"}],"4JCmN":[function(require,module,exports) {
 "use strict";
-var Buffer = require("buffer").Buffer;
 var global = arguments[3];
+var Buffer = require("buffer").Buffer;
 var __createBinding = this && this.__createBinding || (Object.create ? function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     Object.defineProperty(o, k2, {
