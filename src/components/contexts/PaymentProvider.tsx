@@ -18,6 +18,7 @@ import { useNavigateWithQuery } from '../../hooks/useNavigateWithQuery';
 import { PaymentContext, PaymentStatus } from '../../hooks/usePayment';
 import { Confirmations } from '../../types';
 import {USDC_TOKEN} from '../../utils/constants'
+import {readMerchantMints} from '../../helpers/Mint'
 
 export interface PaymentProviderProps {
     children: ReactNode;
@@ -246,6 +247,30 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             clearInterval(interval);
         };
     }, [status, signature, connection]);
+
+
+    // After trx confirms, mint an NFT to customer
+    useEffect(() => {
+        if (!(status === PaymentStatus.Confirmed && connection && publicKey)) return;
+        let changed = false;
+
+        const run = async () => {
+            try {
+                const mint = await readMerchantMints(connection, recipient);
+                console.log('MINT => ', mint)
+
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } catch (error: any) {
+                console.error(error);
+            }
+        };
+        let timeout = setTimeout(run, 0);
+
+        return () => {
+            changed = true;
+            clearTimeout(timeout);
+        };
+    }, [status, connection, publicKey, recipient]);
 
     return (
         <PaymentContext.Provider
