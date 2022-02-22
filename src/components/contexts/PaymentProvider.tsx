@@ -23,7 +23,7 @@ import { useNavigateWithQuery } from '../../hooks/useNavigateWithQuery';
 import { PaymentContext, PaymentStatus } from '../../hooks/usePayment';
 import { Confirmations } from '../../types';
 import {USDC_TOKEN} from '../../utils/constants'
-//import {readMerchantMints} from '../../helpers/Mint'
+import {readMerchantMints} from '../../helpers/Mint'
 
 export interface PaymentProviderProps {
     children: ReactNode;
@@ -155,6 +155,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                 signature = await findTransactionSignature(connection, reference, undefined, 'confirmed');
                 
                 // isolate customer's publickey from trx signature
+                // setCustomer to customer's publicKey
                 const trx = await connection.getParsedTransaction(signature.signature)
                 let user;
                 if (trx) {
@@ -186,7 +187,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             clearInterval(interval);
         };
     }, [status, publicKey, reference, signature, connection, navigate]);
-/*
+
     // When the status is confirmed, validate the transaction against the provided params
     // Then send an NFT from the merchant (recipient) to the customer (publicKey)
     useEffect(() => {
@@ -209,11 +210,13 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     setStatus(PaymentStatus.Valid);
                 }
 
+                // read merchant/recipient wallet to find NFT to send to customer
+                // setMint to NFT publicKey
                 const mint = await readMerchantMints(connection, recipient)
                 if (mint) {
                     console.log('mint => ', mint)
                 }
-                console.log('customer after = ', customer?.toBase58())
+                console.log('customer = ', customer?.toBase58())
 
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -239,7 +242,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             clearTimeout(timeout);
         };
     }, [status, signature, amount, customer, connection, recipient, splToken, reference]);
-*/
+
     // When the status is valid, poll for confirmations until the transaction is finalized
     useEffect(() => {
         if (!(status === PaymentStatus.Valid && signature)) return;
