@@ -1,4 +1,4 @@
-import { PublicKey, TransactionSignature } from '@solana/web3.js';
+import { Keypair, PublicKey, TransactionSignature } from '@solana/web3.js';
 import BigNumber from 'bignumber.js';
 import { createContext, useContext } from 'react';
 import { Confirmations } from '../types';
@@ -13,6 +13,10 @@ export enum PaymentStatus {
 }
 
 export interface PaymentContextState {
+    keypair: Keypair | undefined;
+    setKeypair(keypair: Keypair | undefined): void;
+    mint: PublicKey | undefined;
+    setMint(mint: PublicKey | undefined): void;
     customer: PublicKey | undefined;
     setCustomer(customer: PublicKey | undefined): void;
     collection: PublicKey | undefined;

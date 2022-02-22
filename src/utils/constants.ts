@@ -1,5 +1,5 @@
 import { clusterApiUrl, PublicKey, Keypair } from '@solana/web3.js';
-
+import * as config from '../config.json'
 
 export const MAX_CONFIRMATIONS = 32;
 
@@ -26,4 +26,6 @@ export const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
 export const TOKEN_PROGRAM_ID = new PublicKey(
       "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 );
+
+export const MERCHANT_SECRET_KEY = config.MERCHANT_SECRET_KEY;
 

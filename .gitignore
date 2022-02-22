@@ -2,3 +2,4 @@ node_modules
 .parcel
 dist
 yarn-error.log
+config.json

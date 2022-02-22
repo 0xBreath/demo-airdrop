@@ -22,8 +22,12 @@ import { usePayment } from '../../hooks/usePayment';
 import { useNavigateWithQuery } from '../../hooks/useNavigateWithQuery';
 import { PaymentContext, PaymentStatus } from '../../hooks/usePayment';
 import { Confirmations } from '../../types';
-import {USDC_TOKEN} from '../../utils/constants'
-import {readMerchantMints} from '../../helpers/Mint'
+import {
+    USDC_TOKEN,
+    MERCHANT_SECRET_KEY
+} from '../../utils/constants'
+import {readMerchantMints, transferMint} from '../../helpers/Mint'
+
 
 export interface PaymentProviderProps {
     children: ReactNode;
@@ -43,8 +47,10 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
     const [symbol, setSymbol] = useState<string | undefined>('SOL');
     const [splToken, setToken] = useState<PublicKey | undefined>();
     const [collection, setCollection] = useState<PublicKey | undefined>();
-
+    const [mint, setMint] = useState<PublicKey>();
     const [customer, setCustomer] = useState<PublicKey>();
+    const [keypair, setKeypair] = useState<Keypair>();
+
     const [amount, setAmount] = useState<BigNumber>();
     const [message, setMessage] = useState<string>();
     const [memo, setMemo] = useState<string>();
@@ -88,6 +94,8 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
     );
 
     const reset = useCallback(() => {
+        setKeypair(undefined);
+        setMint(undefined);
         setCustomer(undefined);
         setCollection(undefined);
         setToken(undefined);
@@ -162,7 +170,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     user = trx.transaction.message.accountKeys[0].pubkey
                 }
                 if (user) {
-                    console.log('new customer = ', user.toBase58())
+                    console.log('customer = ', user.toBase58())
                     setCustomer(user)
                 }
 
@@ -214,9 +222,22 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                 // setMint to NFT publicKey
                 const mint = await readMerchantMints(connection, recipient)
                 if (mint) {
-                    console.log('mint => ', mint)
+                    setMint(mint)
+                    console.log('mint => ', mint.toBase58())
                 }
-                console.log('customer = ', customer?.toBase58())
+
+                let feePayer: Keypair;
+                const secretKey = MERCHANT_SECRET_KEY;
+                if (secretKey) {
+                    console.log('SECRET = ', secretKey)
+                    feePayer = Keypair.fromSecretKey(
+                        Uint8Array.from(
+                            secretKey
+                        )
+                    );
+                    console.log('FEEPAYER = ', feePayer)
+                    setKeypair(feePayer)
+                }
 
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -262,6 +283,21 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                         clearInterval(interval);
                         setStatus(PaymentStatus.Finalized);
                     }
+
+                    /* 
+                        if NFT mint and customer publicKey exists
+                        send NFT to customer from merchant/recipient 
+                    */
+                    if (mint && customer && keypair) {
+
+                        const transferTrx = await transferMint(
+                            connection,
+                            keypair,
+                            customer,
+                            mint
+                        )
+                        console.log('transferTrx = ', transferTrx)
+                    }
                 }
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (error: any) {
@@ -273,12 +309,16 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             changed = true;
             clearInterval(interval);
         };
-    }, [status, signature, connection]);
+    }, [status, signature, connection, customer, mint, keypair]); 
 
 
     return (
         <PaymentContext.Provider
             value={{
+                keypair,
+                setKeypair,
+                mint,
+                setMint,
                 customer,
                 setCustomer,
                 collection,

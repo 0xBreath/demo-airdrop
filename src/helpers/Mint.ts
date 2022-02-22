@@ -20,9 +20,8 @@ export const transferMint = async (
     feePayer: Keypair,
     customer: PublicKey,
     mint: PublicKey
-) => {
+): Promise<string | null> => {
 
-    //
     const trx = new web3.Transaction();
 
     // get pubkey of ATA for current owner
