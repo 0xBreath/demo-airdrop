@@ -1,20 +1,20 @@
 
-import { programs } from '@metaplex/js';
+//import { programs } from '@metaplex/js';
 import { Keypair, PublicKey, SystemProgram, Connection } from '@solana/web3.js';
 import {
     ASSOCIATED_TOKEN_PROGRAM_ID,
     MintLayout,
     TOKEN_PROGRAM_ID,
+    getAssociatedTokenAddress
 } from '@solana/spl-token';
 import { 
     TOKEN_METADATA_PROGRAM_ID,
 } from '../utils/constants';
-import { Token } from '@solana/spl-token';
 import { web3, Provider } from '@project-serum/anchor';
 
-const { Metadata, MetadataDataData, CreateMetadata, Creator } =
-    programs.metadata;
-
+//const { Metadata, MetadataDataData, CreateMetadata, Creator } =
+    //programs.metadata;
+/*
 export const createMint = async (
     connection: web3.Connection,
     fee_payer: Keypair,
@@ -71,6 +71,7 @@ export const createMint = async (
         )
     );
 
+    
     const metadataPDA = await Metadata.getPDA(mint.publicKey);
     const metadataData = new MetadataDataData({
         name: "Creature #0",
@@ -168,7 +169,7 @@ export const readMerchantMints = async (
         return null;
     }
 };
-
+*/
 
 
 

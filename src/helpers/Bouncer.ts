@@ -5,7 +5,7 @@ import {
     SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
     TOKEN_METADATA_PROGRAM_ID,
     TOKEN_PROGRAM_ID
-} from '../../utils/constants';
+} from '../utils/constants';
 
 
 

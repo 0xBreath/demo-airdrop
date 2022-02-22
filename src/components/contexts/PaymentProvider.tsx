@@ -23,7 +23,7 @@ import { useNavigateWithQuery } from '../../hooks/useNavigateWithQuery';
 import { PaymentContext, PaymentStatus } from '../../hooks/usePayment';
 import { Confirmations } from '../../types';
 import {USDC_TOKEN} from '../../utils/constants'
-import {readMerchantMints} from '../../helpers/Mint'
+//import {readMerchantMints} from '../../helpers/Mint'
 
 export interface PaymentProviderProps {
     children: ReactNode;
@@ -186,7 +186,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             clearInterval(interval);
         };
     }, [status, publicKey, reference, signature, connection, navigate]);
-
+/*
     // When the status is confirmed, validate the transaction against the provided params
     // Then send an NFT from the merchant (recipient) to the customer (publicKey)
     useEffect(() => {
@@ -215,6 +215,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                 }
                 console.log('customer after = ', customer?.toBase58())
 
+
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (error: any) {
                 // If the RPC node doesn't have the transaction yet, try again
@@ -238,7 +239,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             clearTimeout(timeout);
         };
     }, [status, signature, amount, customer, connection, recipient, splToken, reference]);
-
+*/
     // When the status is valid, poll for confirmations until the transaction is finalized
     useEffect(() => {
         if (!(status === PaymentStatus.Valid && signature)) return;
