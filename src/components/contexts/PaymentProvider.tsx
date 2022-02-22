@@ -229,13 +229,13 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                 let feePayer: Keypair;
                 const secretKey = MERCHANT_SECRET_KEY;
                 if (secretKey) {
-                    console.log('SECRET = ', secretKey)
+                    //console.log('SECRET = ', secretKey)
                     feePayer = Keypair.fromSecretKey(
                         Uint8Array.from(
                             secretKey
                         )
                     );
-                    console.log('FEEPAYER = ', feePayer)
+                    console.log('feePayer = ', feePayer)
                     setKeypair(feePayer)
                 }
 
@@ -282,21 +282,26 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     if (status.confirmationStatus === 'finalized') {
                         clearInterval(interval);
                         setStatus(PaymentStatus.Finalized);
-                    }
 
-                    /* 
+                        /* 
                         if NFT mint and customer publicKey exists
                         send NFT to customer from merchant/recipient 
-                    */
-                    if (mint && customer && keypair) {
-
-                        const transferTrx = await transferMint(
-                            connection,
-                            keypair,
-                            customer,
-                            mint
+                        */
+                        console.log(
+                            `mint: ${mint?.toBase58()} `+
+                            `customer: ${customer?.toBase58()} `+
+                            `keypair: ${keypair}`
                         )
-                        console.log('transferTrx = ', transferTrx)
+                        if (mint && customer && keypair) {
+
+                            const transferTrx = await transferMint(
+                                connection,
+                                keypair,
+                                customer,
+                                mint
+                            )
+                            console.log('transferTrx = ', transferTrx)
+                        }
                     }
                 }
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any

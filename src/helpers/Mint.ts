@@ -10,7 +10,9 @@ import {
 } from '../utils/constants';
 import { 
     getAssociatedTokenAddress,
-    createTransferInstruction
+    createTransferInstruction,
+    createMintToInstruction,
+    createAssociatedTokenAccountInstruction
 } from '@solana/spl-token';
 import { web3 } from '@project-serum/anchor';
 
@@ -37,12 +39,31 @@ export const transferMint = async (
 
     // Add token transfer instructions to transaction
     trx.add(
+        // create token account
+        createAssociatedTokenAccountInstruction(
+            feePayer.publicKey,
+            toATA,
+            customer,
+            mint,            
+            TOKEN_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+        ),
+
         createTransferInstruction(
             fromATA,
             toATA,
             feePayer.publicKey,
             1,
-        ),
+        )
+        /*
+        // mint to token account
+        createMintToInstruction(
+            mint,
+            toATA,
+            feePayer.publicKey,
+            1
+        )
+        */
     );
 
     return await connection.sendTransaction(trx, [feePayer])
