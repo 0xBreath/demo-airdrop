@@ -13,6 +13,8 @@ export enum PaymentStatus {
 }
 
 export interface PaymentContextState {
+    customer: PublicKey | undefined;
+    setCustomer(customer: PublicKey | undefined): void;
     collection: PublicKey | undefined;
     setCollection(collection: PublicKey | undefined): void;
     splToken: PublicKey | undefined;

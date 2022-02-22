@@ -133,7 +133,7 @@ export const fetchMetadata = async (nftMintKey: PublicKey) => {
 export const readMerchantMints = async (
     connection: Connection,
     wallet: PublicKey,
-) => {
+): Promise<PublicKey | null> => {
 
     const walletString = wallet.toBase58().toString()
 
@@ -158,11 +158,17 @@ export const readMerchantMints = async (
         account: any
     ) => {
         mint = account.account.data["parsed"]["info"]["mint"]
-        console.log('mint = ', mint)
+        //console.log('mint = ', mint)
     });
 
-    return mint;
+    if (mint) {
+        return mint;
+    }
+    else {
+        return null;
+    }
 };
+
 
 
 

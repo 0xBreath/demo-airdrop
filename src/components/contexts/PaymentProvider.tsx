@@ -8,7 +8,12 @@ import {
     ValidateTransactionSignatureError,
 } from '@solana/pay';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { ConfirmedSignatureInfo, Keypair, PublicKey, TransactionSignature } from '@solana/web3.js';
+import { 
+    ConfirmedSignatureInfo, 
+    Keypair, 
+    PublicKey, 
+    TransactionSignature
+} from '@solana/web3.js';
 import BigNumber from 'bignumber.js';
 import React, { FC, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useConfig } from '../../hooks/useConfig';
@@ -39,6 +44,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
     const [splToken, setToken] = useState<PublicKey | undefined>();
     const [collection, setCollection] = useState<PublicKey | undefined>();
 
+    const [customer, setCustomer] = useState<PublicKey>();
     const [amount, setAmount] = useState<BigNumber>();
     const [message, setMessage] = useState<string>();
     const [memo, setMemo] = useState<string>();
@@ -48,10 +54,6 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
     const [confirmations, setConfirmations] = useState<Confirmations>(0);
     const navigate = useNavigateWithQuery();
     const progress = useMemo(() => confirmations / requiredConfirmations, [confirmations, requiredConfirmations]);
-
-    const whitelist = useCallback(() => {
-        setCollection(collection);
-    }, [collection]);
 
     const changeSymbol = useCallback(() => {
         if (symbol === 'SOL') {
@@ -86,6 +88,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
     );
 
     const reset = useCallback(() => {
+        setCustomer(undefined);
         setCollection(undefined);
         setToken(undefined);
         setAmount(undefined);
@@ -139,7 +142,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                 clearTimeout(timeout);
             };
         }
-    }, [status, connectWallet, publicKey, url, connection, sendTransaction]);
+    }, [status, connectWallet, publicKey, url, connection, sendTransaction, recipient]);
 
     // When the status is pending, poll for the transaction using the reference key
     useEffect(() => {
@@ -150,12 +153,24 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             let signature: ConfirmedSignatureInfo;
             try {
                 signature = await findTransactionSignature(connection, reference, undefined, 'confirmed');
+                
+                // isolate customer's publickey from trx signature
+                const trx = await connection.getParsedTransaction(signature.signature)
+                let user;
+                if (trx) {
+                    user = trx.transaction.message.accountKeys[0].pubkey
+                }
+                if (user) {
+                    console.log('new customer = ', user.toBase58())
+                    setCustomer(user)
+                }
 
                 if (!changed) {
                     clearInterval(interval);
                     setSignature(signature.signature);
                     setStatus(PaymentStatus.Confirmed);
                     //navigate('/confirmed', { replace: true });
+                    
                 }
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (error: any) {
@@ -170,9 +185,10 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             changed = true;
             clearInterval(interval);
         };
-    }, [status, reference, signature, connection, navigate]);
+    }, [status, publicKey, reference, signature, connection, navigate]);
 
     // When the status is confirmed, validate the transaction against the provided params
+    // Then send an NFT from the merchant (recipient) to the customer (publicKey)
     useEffect(() => {
         if (!(status === PaymentStatus.Confirmed && signature && amount)) return;
         let changed = false;
@@ -192,6 +208,13 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                 if (!changed) {
                     setStatus(PaymentStatus.Valid);
                 }
+
+                const mint = await readMerchantMints(connection, recipient)
+                if (mint) {
+                    console.log('mint => ', mint)
+                }
+                console.log('customer after = ', customer?.toBase58())
+
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (error: any) {
                 // If the RPC node doesn't have the transaction yet, try again
@@ -214,7 +237,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             changed = true;
             clearTimeout(timeout);
         };
-    }, [status, signature, amount, connection, recipient, splToken, reference]);
+    }, [status, signature, amount, customer, connection, recipient, splToken, reference]);
 
     // When the status is valid, poll for confirmations until the transaction is finalized
     useEffect(() => {
@@ -249,32 +272,11 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
     }, [status, signature, connection]);
 
 
-    // After trx confirms, mint an NFT to customer
-    useEffect(() => {
-        if (!(status === PaymentStatus.Confirmed && connection && publicKey)) return;
-        let changed = false;
-
-        const run = async () => {
-            try {
-                const mint = await readMerchantMints(connection, recipient);
-                console.log('MINT => ', mint)
-
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            } catch (error: any) {
-                console.error(error);
-            }
-        };
-        let timeout = setTimeout(run, 0);
-
-        return () => {
-            changed = true;
-            clearTimeout(timeout);
-        };
-    }, [status, connection, publicKey, recipient]);
-
     return (
         <PaymentContext.Provider
             value={{
+                customer,
+                setCustomer,
                 collection,
                 setCollection,
                 splToken,
