@@ -11,8 +11,7 @@ import {
 import { 
     getAssociatedTokenAddress,
     createTransferInstruction,
-    createMintToInstruction,
-    createAssociatedTokenAccountInstruction
+    getOrCreateAssociatedTokenAccount
 } from '@solana/spl-token';
 import { web3 } from '@project-serum/anchor';
 
@@ -26,44 +25,40 @@ export const transferMint = async (
 
     const trx = new web3.Transaction();
 
-    // get pubkey of ATA for current owner
-    const fromATA = await getAssociatedTokenAddress(
-        mint, // mint
-        feePayer.publicKey // token account authority,
-    ); 
-    // get/create pubkey of ATA for customer to hold mint
-    const toATA = await getAssociatedTokenAddress(
-        mint, // mint
-        customer // token account authority,
-    ); 
+    // merchant's ATA currently holding mint
+    const fromATA = await getOrCreateAssociatedTokenAccount(
+        connection,
+        feePayer,
+        mint,
+        feePayer.publicKey,
+        undefined,
+        undefined,
+        undefined,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+    // customer's ATA to hold mint
+    const toATA = await getOrCreateAssociatedTokenAccount(
+        connection,
+        feePayer,
+        mint,
+        customer,
+        undefined,
+        undefined,
+        undefined,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID 
+    )
 
+    
     // Add token transfer instructions to transaction
     trx.add(
-        // create token account
-        createAssociatedTokenAccountInstruction(
-            feePayer.publicKey,
-            toATA,
-            customer,
-            mint,            
-            TOKEN_PROGRAM_ID,
-            ASSOCIATED_TOKEN_PROGRAM_ID
-        ),
-
         createTransferInstruction(
-            fromATA,
-            toATA,
+            fromATA.address,
+            toATA.address,
             feePayer.publicKey,
             1,
         )
-        /*
-        // mint to token account
-        createMintToInstruction(
-            mint,
-            toATA,
-            feePayer.publicKey,
-            1
-        )
-        */
     );
 
     return await connection.sendTransaction(trx, [feePayer])
@@ -121,15 +116,20 @@ export const readMerchantMints = async (
     );
 
     let mint;
-    console.log(`Found ${accounts.length} token account(s) for wallet ${walletString}: `);
+    let balance;
+    let i = 0;
     accounts.forEach(async (
         account: any
     ) => {
-        mint = new PublicKey(account.account.data["parsed"]["info"]["mint"]);
-        //console.log('mint = ', mint.toBase58())
+        balance = account.account.data["parsed"]["info"]["tokenAmount"]["amount"];
+        console.log("balance = ", balance)
+        if (balance == 1) {
+            i += 1;
+            mint = new PublicKey(account.account.data["parsed"]["info"]["mint"]);
+        }
     });
-
     if (mint) {
+        console.log(`Found ${i} token account(s) for wallet ${walletString}: `)
         return mint;
     }
     else {

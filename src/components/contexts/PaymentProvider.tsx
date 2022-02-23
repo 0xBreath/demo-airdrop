@@ -17,7 +17,6 @@ import {
 import BigNumber from 'bignumber.js';
 import React, { FC, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useConfig } from '../../hooks/useConfig';
-import { usePayment } from '../../hooks/usePayment';
 
 import { useNavigateWithQuery } from '../../hooks/useNavigateWithQuery';
 import { PaymentContext, PaymentStatus } from '../../hooks/usePayment';
@@ -124,7 +123,6 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
 
             const run = async () => {
                 try {
-
                     const { recipient, amount, splToken, reference, memo } = parseURL(url);
                     if (!amount) return;
 
@@ -137,6 +135,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     if (!changed) {
                         await sendTransaction(transaction, connection);
                     }
+
                 } catch (error) {
                     // If the transaction is declined or fails, try again
                     console.error(error);
@@ -160,8 +159,16 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
         const interval = setInterval(async () => {
             let signature: ConfirmedSignatureInfo;
             try {
-                signature = await findTransactionSignature(connection, reference, undefined, 'confirmed');
-                
+                signature = await findTransactionSignature(connection, reference, undefined, 'confirmed');  
+
+
+                if (!changed) {
+                    clearInterval(interval);
+                    setSignature(signature.signature);
+                    setStatus(PaymentStatus.Confirmed);
+                    //navigate('/confirmed', { replace: true });
+                }
+
                 // isolate customer's publickey from trx signature
                 // setCustomer to customer's publicKey
                 const trx = await connection.getParsedTransaction(signature.signature)
@@ -172,15 +179,20 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                 if (user) {
                     console.log('customer = ', user.toBase58())
                     setCustomer(user)
+                } 
+
+                let feePayer: Keypair;
+                const secretKey = MERCHANT_SECRET_KEY;
+                if (secretKey) {
+                    feePayer = Keypair.fromSecretKey(
+                        Uint8Array.from(
+                            secretKey
+                        )
+                    );
+                    console.log('feePayer = ', feePayer)
+                    setKeypair(feePayer)
                 }
 
-                if (!changed) {
-                    clearInterval(interval);
-                    setSignature(signature.signature);
-                    setStatus(PaymentStatus.Confirmed);
-                    //navigate('/confirmed', { replace: true });
-                    
-                }
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (error: any) {
                 // If the RPC node doesn't have the transaction signature yet, try again
@@ -218,28 +230,6 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     setStatus(PaymentStatus.Valid);
                 }
 
-                // read merchant/recipient wallet to find NFT to send to customer
-                // setMint to NFT publicKey
-                const mint = await readMerchantMints(connection, recipient)
-                if (mint) {
-                    setMint(mint)
-                    console.log('mint => ', mint.toBase58())
-                }
-
-                let feePayer: Keypair;
-                const secretKey = MERCHANT_SECRET_KEY;
-                if (secretKey) {
-                    //console.log('SECRET = ', secretKey)
-                    feePayer = Keypair.fromSecretKey(
-                        Uint8Array.from(
-                            secretKey
-                        )
-                    );
-                    console.log('feePayer = ', feePayer)
-                    setKeypair(feePayer)
-                }
-
-
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (error: any) {
                 // If the RPC node doesn't have the transaction yet, try again
@@ -262,7 +252,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             changed = true;
             clearTimeout(timeout);
         };
-    }, [status, signature, amount, customer, connection, recipient, splToken, reference]);
+    }, [status, signature, MERCHANT_SECRET_KEY, amount, customer, connection, recipient, splToken, reference]);
 
     // When the status is valid, poll for confirmations until the transaction is finalized
     useEffect(() => {
@@ -282,6 +272,14 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     if (status.confirmationStatus === 'finalized') {
                         clearInterval(interval);
                         setStatus(PaymentStatus.Finalized);
+
+                        // read merchant/recipient wallet to find NFT to send to customer
+                        // setMint to NFT publicKey
+                        const mint = await readMerchantMints(connection, recipient)
+                        if (mint) {
+                            setMint(mint)
+                            console.log('mint => ', mint.toBase58())
+                        }
 
                         /* 
                         if NFT mint and customer publicKey exists
