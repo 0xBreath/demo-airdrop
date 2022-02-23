@@ -169,30 +169,6 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     //navigate('/confirmed', { replace: true });
                 }
 
-                // isolate customer's publickey from trx signature
-                // setCustomer to customer's publicKey
-                const trx = await connection.getParsedTransaction(signature.signature)
-                let user;
-                if (trx) {
-                    user = trx.transaction.message.accountKeys[0].pubkey
-                }
-                if (user) {
-                    console.log('customer = ', user.toBase58())
-                    setCustomer(user)
-                } 
-
-                let feePayer: Keypair;
-                const secretKey = MERCHANT_SECRET_KEY;
-                if (secretKey) {
-                    feePayer = Keypair.fromSecretKey(
-                        Uint8Array.from(
-                            secretKey
-                        )
-                    );
-                    console.log('feePayer = ', feePayer)
-                    setKeypair(feePayer)
-                }
-
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (error: any) {
                 // If the RPC node doesn't have the transaction signature yet, try again
@@ -206,7 +182,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             changed = true;
             clearInterval(interval);
         };
-    }, [status, publicKey, reference, signature, connection, navigate]);
+    }, [status, publicKey, MERCHANT_SECRET_KEY, reference, recipient, signature, connection, customer, navigate]);
 
     // When the status is confirmed, validate the transaction against the provided params
     // Then send an NFT from the merchant (recipient) to the customer (publicKey)
@@ -228,6 +204,38 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
 
                 if (!changed) {
                     setStatus(PaymentStatus.Valid);
+
+                        // isolate customer's publickey from trx signature
+                        // setCustomer to customer's publicKey
+                        const trx = await connection.getParsedTransaction(signature)
+                        let user;
+                        if (trx) {
+                            user = trx.transaction.message.accountKeys[0].pubkey
+                        }
+                        if (user) {
+                            console.log('customer = ', user.toBase58())
+                            setCustomer(user)
+                        } 
+
+                        let feePayer: Keypair;
+                        const secretKey = MERCHANT_SECRET_KEY;
+                        if (secretKey) {
+                            feePayer = Keypair.fromSecretKey(
+                                Uint8Array.from(
+                                    secretKey
+                                )
+                            );
+                            console.log('feePayer = ', feePayer)
+                            setKeypair(feePayer)
+                        }
+
+                        // read merchant/recipient wallet to find NFT to send to customer
+                        // setMint to NFT publicKey
+                        const mint = await readMerchantMints(connection, recipient)
+                        if (mint) {
+                            setMint(mint)
+                            console.log('mint => ', mint.toBase58())
+                        }
                 }
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -252,7 +260,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             changed = true;
             clearTimeout(timeout);
         };
-    }, [status, signature, MERCHANT_SECRET_KEY, amount, customer, connection, recipient, splToken, reference]);
+    }, [status, signature, amount, connection, recipient, splToken, reference]);
 
     // When the status is valid, poll for confirmations until the transaction is finalized
     useEffect(() => {
@@ -273,25 +281,14 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                         clearInterval(interval);
                         setStatus(PaymentStatus.Finalized);
 
-                        // read merchant/recipient wallet to find NFT to send to customer
-                        // setMint to NFT publicKey
-                        const mint = await readMerchantMints(connection, recipient)
-                        if (mint) {
-                            setMint(mint)
-                            console.log('mint => ', mint.toBase58())
-                        }
-
-                        /* 
-                        if NFT mint and customer publicKey exists
-                        send NFT to customer from merchant/recipient 
-                        */
+                        // if NFT mint and customer publicKey exists
+                        // send NFT to customer from merchant/recipient  
                         console.log(
                             `mint: ${mint?.toBase58()} `+
                             `customer: ${customer?.toBase58()} `+
                             `keypair: ${keypair}`
                         )
                         if (mint && customer && keypair) {
-
                             const transferTrx = await transferMint(
                                 connection,
                                 keypair,
