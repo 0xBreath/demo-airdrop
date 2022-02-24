@@ -92,6 +92,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
         [recipient, amount, splToken, reference, label, message, memo]
     );
 
+    // resets entire payment (go back to home page)
     const reset = useCallback(() => {
         setKeypair(undefined);
         setMint(undefined);
@@ -107,6 +108,20 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
         setConfirmations(0);
         navigate('/new', { replace: true });
     }, [navigate]);
+
+    // resets one customer's trx, but maintains merchant payment
+    // allows multiple customers to scan concurrently
+    const serve = useCallback(() => {
+        setKeypair(undefined);
+        setMint(undefined);
+        setCustomer(undefined);
+        setCollection(undefined);
+        // reset reference for next customer (trx identifier)
+        setReference(Keypair.generate().publicKey);
+        setSignature(undefined);
+        setStatus(PaymentStatus.Pending);
+        setConfirmations(0);
+    }, []);
 
     const generate = useCallback(() => {
         if (status === PaymentStatus.New && !reference) {
@@ -167,6 +182,14 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     setSignature(signature.signature);
                     setStatus(PaymentStatus.Confirmed);
                     //navigate('/confirmed', { replace: true });
+
+                    // read merchant/recipient wallet to find NFT to send to customer
+                    // setMint to NFT publicKey
+                    const mint = await readMerchantMints(connection, recipient)
+                    if (mint) {
+                        setMint(mint)
+                        console.log('mint => ', mint.toBase58())
+                    }
                 }
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -185,7 +208,6 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
     }, [status, publicKey, MERCHANT_SECRET_KEY, reference, recipient, signature, connection, customer, navigate]);
 
     // When the status is confirmed, validate the transaction against the provided params
-    // Then send an NFT from the merchant (recipient) to the customer (publicKey)
     useEffect(() => {
         if (!(status === PaymentStatus.Confirmed && signature && amount)) return;
         let changed = false;
@@ -205,38 +227,30 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                 if (!changed) {
                     setStatus(PaymentStatus.Valid);
 
-                        // isolate customer's publickey from trx signature
-                        // setCustomer to customer's publicKey
-                        const trx = await connection.getParsedTransaction(signature)
-                        let user;
-                        if (trx) {
-                            user = trx.transaction.message.accountKeys[0].pubkey
-                        }
-                        if (user) {
-                            console.log('customer = ', user.toBase58())
-                            setCustomer(user)
-                        } 
-
-                        let feePayer: Keypair;
-                        const secretKey = MERCHANT_SECRET_KEY;
-                        if (secretKey) {
-                            feePayer = Keypair.fromSecretKey(
-                                Uint8Array.from(
-                                    secretKey
-                                )
-                            );
-                            console.log('feePayer = ', feePayer)
-                            setKeypair(feePayer)
-                        }
-
-                        // read merchant/recipient wallet to find NFT to send to customer
-                        // setMint to NFT publicKey
-                        const mint = await readMerchantMints(connection, recipient)
-                        if (mint) {
-                            setMint(mint)
-                            console.log('mint => ', mint.toBase58())
-                        }
+                // isolate customer's publickey from trx signature
+                // setCustomer to customer's publicKey
+                const trx = await connection.getParsedTransaction(signature)
+                let user;
+                if (trx) {
+                    user = trx.transaction.message.accountKeys[0].pubkey
                 }
+                if (user) {
+                    console.log('customer = ', user.toBase58())
+                    setCustomer(user)
+                } 
+
+                let feePayer: Keypair;
+                const secretKey = MERCHANT_SECRET_KEY;
+                if (secretKey) {
+                    feePayer = Keypair.fromSecretKey(
+                        Uint8Array.from(
+                            secretKey
+                        )
+                    );
+                    console.log('feePayer = ', feePayer)
+                    setKeypair(feePayer)
+                }
+            }
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (error: any) {
@@ -277,11 +291,11 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                 if (!changed) {
                     setConfirmations((status.confirmations || 0) as Confirmations);
 
+                    // When finalized => send NFT from merchant (recipient) to customer (publicKey)
                     if (status.confirmationStatus === 'finalized') {
                         clearInterval(interval);
                         setStatus(PaymentStatus.Finalized);
 
-                        // if NFT mint and customer publicKey exists
                         // send NFT to customer from merchant/recipient  
                         console.log(
                             `mint: ${mint?.toBase58()} `+
@@ -297,6 +311,9 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                             )
                             console.log('transferTrx = ', transferTrx)
                         }
+
+                        // reset trx for nnext customer who scans QR code
+                        serve()
                     }
                 }
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
