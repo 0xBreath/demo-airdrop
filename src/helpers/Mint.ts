@@ -7,6 +7,7 @@ import {
 } from '@solana/spl-token';
 import { 
     TOKEN_METADATA_PROGRAM_ID,
+    MINTS_ROUTE
 } from '../utils/constants';
 import { 
     getAssociatedTokenAddress,
@@ -61,6 +62,21 @@ export const transferMint = async (
         )
     );
 
+    const updatedMint = {
+        mint: mint.toBase58().toString(),
+        used: true
+    };
+
+    // update merchant mints on server
+    // adds transferred mint to list of used NFTs
+    await fetch(MINTS_ROUTE, {
+        method: 'PUT',
+        headers: {
+            'Content-Type':'application/json',
+        },
+        body: JSON.stringify(updatedMint)
+    })
+
     return await connection.sendTransaction(trx, [feePayer])
 }
 
@@ -93,10 +109,26 @@ export const fetchMetadata = async (nftMintKey: PublicKey) => {
   )[0];
 };
 
-export const readMerchantMints = async (
+export const getMint = async (
+    connection: Connection,
+): Promise<PublicKey | null> => {
+    const route = MINTS_ROUTE + '/valid';
+    const validMints = await (await fetch(route, {method: "Get"})).json();
+    console.log('VALID MINTS: ', validMints)
+
+    const mint = validMints[validMints.length - 1].mint.toString();
+
+    if (mint) {
+        return new PublicKey(mint);
+    } else {
+        return null;
+    }
+};
+
+export const InitMerchant = async (
     connection: Connection,
     wallet: PublicKey,
-): Promise<PublicKey | null> => {
+) => {
 
     const walletString = wallet.toBase58().toString()
 
@@ -118,21 +150,40 @@ export const readMerchantMints = async (
     let mint;
     let balance;
     let i = 0;
+    let listMints: string[] = [];
+
     accounts.forEach(async (
         account: any
     ) => {
         balance = account.account.data["parsed"]["info"]["tokenAmount"]["amount"];
-        console.log("balance = ", balance)
         if (balance == 1) {
             i += 1;
-            mint = new PublicKey(account.account.data["parsed"]["info"]["mint"]);
+            mint = account.account.data["parsed"]["info"]["mint"];
+
+            // POST mint to server if in merchant wallet (balance == 1)
+            const item = {
+                mint: mint,
+                used: false
+            }
+            const mintRoute = MINTS_ROUTE + '/' + mint.toString()
+
+            await fetch(mintRoute, {
+                method: 'POST',
+                headers: {
+                    'Content-Type':'application/json'
+                },
+                body: JSON.stringify(item)
+            })
+            // add to list for testing
+            listMints.push(JSON.stringify(item));
         }
     });
     if (mint) {
-        console.log(`Found ${i} token account(s) for wallet ${walletString}: `)
-        return mint;
+        console.log(`Found ${i} token account(s) for wallet = ${walletString}`)
+        console.log('listMints => ', JSON.stringify(listMints))
     }
     else {
+        console.log(`No mints found for wallet = ${walletString}`)
         return null;
     }
 };

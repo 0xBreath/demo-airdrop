@@ -23,9 +23,14 @@ import { PaymentContext, PaymentStatus } from '../../hooks/usePayment';
 import { Confirmations } from '../../types';
 import {
     USDC_TOKEN,
-    MERCHANT_SECRET_KEY
+    MERCHANT_SECRET_KEY,
+    MINTS_ROUTE
 } from '../../utils/constants'
-import {readMerchantMints, transferMint} from '../../helpers/Mint'
+import {
+    InitMerchant,
+    getMint, 
+    transferMint
+} from '../../helpers/Mint'
 
 
 export interface PaymentProviderProps {
@@ -123,13 +128,14 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
         setConfirmations(0);
     }, []);
 
-    const generate = useCallback(() => {
+    const generate = useCallback(async () => {
         if (status === PaymentStatus.New && !reference) {
             setReference(Keypair.generate().publicKey);
             setStatus(PaymentStatus.Pending);
+            await InitMerchant(connection, recipient)
             navigate('/pending');
         }
-    }, [status, reference, navigate]);
+    }, [connection, recipient, status, reference, navigate]);
 
     // If there's a connected wallet, use it to sign and send the transaction
     useEffect(() => {
@@ -183,12 +189,11 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     setStatus(PaymentStatus.Confirmed);
                     //navigate('/confirmed', { replace: true });
 
-                    // read merchant/recipient wallet to find NFT to send to customer
-                    // setMint to NFT publicKey
-                    const mint = await readMerchantMints(connection, recipient)
-                    if (mint) {
-                        setMint(mint)
-                        console.log('mint => ', mint.toBase58())
+                    // get an unused mint from server
+                    const mintToSend = await getMint(connection);
+                    if (mintToSend) {
+                        setMint(mintToSend)
+                        console.log('mint => ', mintToSend.toBase58())
                     }
                 }
 
@@ -239,6 +244,8 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     setCustomer(user)
                 } 
 
+                // set merchant keypair
+                // reads available mints and signs trxs to customers
                 let feePayer: Keypair;
                 const secretKey = MERCHANT_SECRET_KEY;
                 if (secretKey) {
@@ -295,13 +302,8 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     if (status.confirmationStatus === 'finalized') {
                         clearInterval(interval);
                         setStatus(PaymentStatus.Finalized);
-
+/*
                         // send NFT to customer from merchant/recipient  
-                        console.log(
-                            `mint: ${mint?.toBase58()} `+
-                            `customer: ${customer?.toBase58()} `+
-                            `keypair: ${keypair}`
-                        )
                         if (mint && customer && keypair) {
                             const transferTrx = await transferMint(
                                 connection,
@@ -311,8 +313,9 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                             )
                             console.log('transferTrx = ', transferTrx)
                         }
-
-                        // reset trx for nnext customer who scans QR code
+*/
+                        // reset customer details for person who scans QR code (i.e. customer, mint)
+                        // does NOT reset payment details (i.e. amount, splToken, etc)
                         serve()
                     }
                 }

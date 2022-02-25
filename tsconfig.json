@@ -1,5 +1,5 @@
 {
-    "include": ["src", "types"],
+    "include": ["src", "types", "server"],
     "exclude": ["node_modules"],
     "compilerOptions": {
         "allowJs": true,
@@ -12,6 +12,7 @@
         "esModuleInterop": true,
         "resolveJsonModule": true,
         "isolatedModules": true,
-        "typeRoots": ["node_modules/@types"]
+        "typeRoots": ["node_modules/@types"],
+        "allowSyntheticDefaultImports": true
     }
 }
