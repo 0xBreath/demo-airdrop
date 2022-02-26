@@ -47,6 +47,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
     } = useConfig();
     const { publicKey, sendTransaction } = useWallet();
 
+
     /* added token, symbol states to Payment model */
     const [symbol, setSymbol] = useState<string | undefined>('SOL');
     const [splToken, setToken] = useState<PublicKey | undefined>();
@@ -117,6 +118,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
     // resets one customer's trx, but maintains merchant payment
     // allows multiple customers to scan concurrently
     const serve = useCallback(() => {
+        console.log('### SERVE ###')
         setKeypair(undefined);
         setMint(undefined);
         setCustomer(undefined);
@@ -132,7 +134,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
         if (status === PaymentStatus.New && !reference) {
             setReference(Keypair.generate().publicKey);
             setStatus(PaymentStatus.Pending);
-            await InitMerchant(connection, recipient)
+            await InitMerchant(connection, recipient);
             navigate('/pending');
         }
     }, [connection, recipient, status, reference, navigate]);
@@ -190,11 +192,26 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     //navigate('/confirmed', { replace: true });
 
                     // get an unused mint from server
-                    const mintToSend = await getMint(connection);
+                    const mintToSend = await getMint();
                     if (mintToSend) {
                         setMint(mintToSend)
                         console.log('mint => ', mintToSend.toBase58())
+                        console.log()
                     }
+
+                    // isolate customer's publickey from trx signature
+                    // setCustomer to customer's publicKey
+                    let user;
+                    let trx;
+                    if (signature) {
+                        trx = await connection.getParsedTransaction(signature.signature)
+                        console.log('trx = ', trx)
+                    }
+                    if (trx) {
+                        user = trx.transaction.message.accountKeys[0].pubkey
+                        console.log('customer = ', user.toBase58())
+                        setCustomer(user)
+                    } 
                 }
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -232,31 +249,19 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                 if (!changed) {
                     setStatus(PaymentStatus.Valid);
 
-                // isolate customer's publickey from trx signature
-                // setCustomer to customer's publicKey
-                const trx = await connection.getParsedTransaction(signature)
-                let user;
-                if (trx) {
-                    user = trx.transaction.message.accountKeys[0].pubkey
-                }
-                if (user) {
-                    console.log('customer = ', user.toBase58())
-                    setCustomer(user)
-                } 
-
-                // set merchant keypair
-                // reads available mints and signs trxs to customers
-                let feePayer: Keypair;
-                const secretKey = MERCHANT_SECRET_KEY;
-                if (secretKey) {
-                    feePayer = Keypair.fromSecretKey(
-                        Uint8Array.from(
-                            secretKey
-                        )
-                    );
-                    console.log('feePayer = ', feePayer)
-                    setKeypair(feePayer)
-                }
+                    // set merchant keypair
+                    // reads available mints and signs trxs to customers
+                    let feePayer: Keypair;
+                    const secretKey = MERCHANT_SECRET_KEY;
+                    if (secretKey) {
+                        feePayer = Keypair.fromSecretKey(
+                            Uint8Array.from(
+                                secretKey
+                            )
+                        );
+                        console.log('feePayer = ', feePayer)
+                        setKeypair(feePayer)
+                    }
             }
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -302,7 +307,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     if (status.confirmationStatus === 'finalized') {
                         clearInterval(interval);
                         setStatus(PaymentStatus.Finalized);
-/*
+
                         // send NFT to customer from merchant/recipient  
                         if (mint && customer && keypair) {
                             const transferTrx = await transferMint(
@@ -313,7 +318,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                             )
                             console.log('transferTrx = ', transferTrx)
                         }
-*/
+
                         // reset customer details for person who scans QR code (i.e. customer, mint)
                         // does NOT reset payment details (i.e. amount, splToken, etc)
                         serve()

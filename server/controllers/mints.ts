@@ -67,6 +67,8 @@ export const create = (req: any, res: any) => {
 
 export const update = async (req: any, res: any) => {
 
+  console.log('UPDATE')
+
   // Validate request
   if (!req.params.mint) {
     res.status(400).send({
@@ -86,7 +88,7 @@ export const update = async (req: any, res: any) => {
   if (oldMint == null) {
     console.log('ERROR: oldMint not found in database')
   } else {
-    console.log('oldMint: ', oldMint)
+    console.log('oldMint found.')
   }
 
   // change user to signed=1 (verified)
@@ -108,14 +110,14 @@ export const update = async (req: any, res: any) => {
         return true;
       } else {
         res.send({
-          message: `Failed to update Mint = ${mint}. Minnt was not found or req.body is empty!`
+          message: `Failed to update Mint (${mint}). Mint was not found or req.body is empty!`
         });
         return false;
       }
     })
     .catch((err: any) => {
       res.status(500).send({
-        message: "Error updating Mint = " + mint
+        message: "Error updating Mint: " + mint
       });
       return false;
     });

@@ -62,22 +62,15 @@ export const transferMint = async (
         )
     );
 
-    const updatedMint = {
-        mint: mint.toBase58().toString(),
-        used: true
-    };
+    const confirm = await connection.sendTransaction(trx, [feePayer])
 
-    // update merchant mints on server
-    // adds transferred mint to list of used NFTs
-    await fetch(MINTS_ROUTE, {
-        method: 'PUT',
-        headers: {
-            'Content-Type':'application/json',
-        },
-        body: JSON.stringify(updatedMint)
-    })
-
-    return await connection.sendTransaction(trx, [feePayer])
+    if (confirm) {
+        console.log('Mint transfer succeeded!')
+        return confirm;
+    } else {
+        console.log('Mint transfer failed to confirm')
+        return null;
+    }
 }
 
 
@@ -109,16 +102,23 @@ export const fetchMetadata = async (nftMintKey: PublicKey) => {
   )[0];
 };
 
-export const getMint = async (
-    connection: Connection,
-): Promise<PublicKey | null> => {
+export const getMint = async (): Promise<PublicKey | null> => {
     const route = MINTS_ROUTE + '/valid';
     const validMints = await (await fetch(route, {method: "Get"})).json();
     console.log('VALID MINTS: ', validMints)
 
     const mint = validMints[validMints.length - 1].mint.toString();
 
-    if (mint) {
+    if (mint) {         
+        // update merchant mints on server
+        // adds transferred mint to list of used NFTs
+        const route = MINTS_ROUTE + `/${mint}`
+        await fetch(route, {
+            method: 'PUT',
+            headers: {
+                'Content-Type':'application/json',
+            }
+        })
         return new PublicKey(mint);
     } else {
         return null;
@@ -150,7 +150,6 @@ export const InitMerchant = async (
     let mint;
     let balance;
     let i = 0;
-    let listMints: string[] = [];
 
     accounts.forEach(async (
         account: any
@@ -170,20 +169,18 @@ export const InitMerchant = async (
             await fetch(mintRoute, {
                 method: 'POST',
                 headers: {
-                    'Content-Type':'application/json'
+                    'Content-Type':'application/json',
+                    'Accept':'application/json'
                 },
                 body: JSON.stringify(item)
             })
-            // add to list for testing
-            listMints.push(JSON.stringify(item));
         }
     });
     if (mint) {
-        console.log(`Found ${i} token account(s) for wallet = ${walletString}`)
-        console.log('listMints => ', JSON.stringify(listMints))
+        console.log(`Found ${i} token account(s) for wallet: ${walletString}`)
     }
     else {
-        console.log(`No mints found for wallet = ${walletString}`)
+        console.log(`No mints found for wallet: ${walletString}`)
         return null;
     }
 };
