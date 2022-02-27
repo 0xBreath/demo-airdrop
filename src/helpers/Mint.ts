@@ -24,6 +24,10 @@ export const transferMint = async (
     mint: PublicKey
 ): Promise<string | null> => {
 
+    console.log('transfer feePayer -> ', feePayer.publicKey.toBase58())
+    console.log('transfer mint -> ' , mint.toBase58())
+    console.log('transfer customer -> ', customer.toBase58())
+
     const trx = new web3.Transaction();
 
     // merchant's ATA currently holding mint
@@ -38,6 +42,8 @@ export const transferMint = async (
         TOKEN_PROGRAM_ID,
         ASSOCIATED_TOKEN_PROGRAM_ID
     );
+    console.log('fromATA -> ', fromATA.address.toBase58())
+
     // customer's ATA to hold mint
     const toATA = await getOrCreateAssociatedTokenAccount(
         connection,
@@ -50,8 +56,8 @@ export const transferMint = async (
         TOKEN_PROGRAM_ID,
         ASSOCIATED_TOKEN_PROGRAM_ID 
     )
+    console.log('toATA -> ', toATA.address.toBase58())
 
-    
     // Add token transfer instructions to transaction
     trx.add(
         createTransferInstruction(
@@ -61,14 +67,19 @@ export const transferMint = async (
             1,
         )
     );
+    
+    if (fromATA && toATA) {
+        const confirm = await connection.sendTransaction(trx, [feePayer])
 
-    const confirm = await connection.sendTransaction(trx, [feePayer])
-
-    if (confirm) {
-        console.log('Mint transfer succeeded!')
-        return confirm;
+        if (confirm) {
+            console.log('Mint transfer succeeded!')
+            return confirm;
+        } else {
+            console.log('Mint transfer failed to confirm')
+            return null;
+        }
     } else {
-        console.log('Mint transfer failed to confirm')
+        console.log('ERROR: Failed to create token accounts!')
         return null;
     }
 }
