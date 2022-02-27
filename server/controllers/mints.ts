@@ -50,6 +50,7 @@ export const create = (req: any, res: any) => {
     const mint = {
         mint: req.body.mint,
         used: false,
+        trx: null
     };
     
       // Save User in the database
@@ -70,7 +71,7 @@ export const update = async (req: any, res: any) => {
   console.log('UPDATE')
 
   // Validate request
-  if (!req.params.mint) {
+  if (!req.params.mint || !req.body) {
     res.status(400).send({
       message: "Content can not be empty!"
     });
@@ -80,6 +81,7 @@ export const update = async (req: any, res: any) => {
   // Create a User
   const mint = req.params.mint;
   console.log('MINT = ', mint)
+  console.log('TRX = ', req.body.trx)
 
   // return existing user
   const oldMint = await Mint.findOne({
@@ -95,6 +97,7 @@ export const update = async (req: any, res: any) => {
   const updateMint = {
     mint: oldMint.mint,
     used: true,
+    trx: req.body.trx
   }
   
   // update User in database

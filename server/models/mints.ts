@@ -7,7 +7,10 @@ export const Mint = (sequelize: any) => {
             },
             used: {
                 type: DataTypes.BOOLEAN,
-            }
+            },
+            trx: {
+                type: DataTypes.STRING,
+            }         
         }
     )
     return Mint

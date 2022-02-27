@@ -264,7 +264,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                         setKeypair(feePayer)
                     }
                     // get an unused mint from server
-                    const mintToSend = await getMint();
+                    const mintToSend = await getMint(signature);
                     if (mintToSend) {
                         setMint(mintToSend)
                         console.log('mint => ', mintToSend.toBase58())

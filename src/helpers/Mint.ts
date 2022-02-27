@@ -113,14 +113,22 @@ export const fetchMetadata = async (nftMintKey: PublicKey) => {
   )[0];
 };
 
-export const getMint = async (): Promise<PublicKey | null> => {
+export const getMint = async (trx: string): Promise<PublicKey | null> => {
     const route = MINTS_ROUTE + '/valid';
     const validMints = await (await fetch(route, {method: "Get"})).json();
     console.log('VALID MINTS: ', validMints)
+    console.log('TRX: ', trx)
 
     const mint = validMints[validMints.length - 1].mint.toString();
 
-    if (mint) {         
+    const item = {
+        mint: mint,
+        used: true,
+        trx: trx.toString()
+    }
+
+    if (mint) {      
+        console.log('trx.....')   
         // update merchant mints on server
         // adds transferred mint to list of used NFTs
         const route = MINTS_ROUTE + `/${mint}`
@@ -128,7 +136,9 @@ export const getMint = async (): Promise<PublicKey | null> => {
             method: 'PUT',
             headers: {
                 'Content-Type':'application/json',
-            }
+                'Accept':'application/json'
+            },
+            body: JSON.stringify(item)
         })
         return new PublicKey(mint);
     } else {
@@ -173,7 +183,8 @@ export const InitMerchant = async (
             // POST mint to server if in merchant wallet (balance == 1)
             const item = {
                 mint: mint,
-                used: false
+                used: false,
+                trx: null
             }
             const mintRoute = MINTS_ROUTE + '/' + mint.toString()
 
