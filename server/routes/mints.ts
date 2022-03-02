@@ -8,8 +8,9 @@ import * as mints from "../controllers/mints"
 import {Express} from 'express'
 import * as express from 'express'
 import app from '../server'
+const bs58 = require('bs58');
+
 import * as config from '../config.json'
-import { nextTick } from 'process';
 const secret = config.MERCHANT_SECRET_KEY;
 
 const verify = async (
@@ -36,11 +37,9 @@ const verify = async (
 
   // create and sign offline trx to verify request
   const encoder = new TextEncoder()
-  const decoder = new TextDecoder()
 
   const msg = 'arbitrary message to verify wallet'
   const encodedMsg = encoder.encode(msg)
-  const secretBytes = Buffer.from(secret);
   const signature = nacl.sign.detached(encodedMsg, feePayer.secretKey)
 
   if (!signature) {
@@ -50,7 +49,7 @@ const verify = async (
     return;   
   }
 
-    console.log('signature: ', signature.toString())
+    console.log('signature: ', bs58.encode(signature))
     console.log('pubkey: ', feePayer.publicKey.toBase58())
   
     const encodedSig = Uint8Array.from(signature);

@@ -1989,20 +1989,7 @@ class Torus {
     }
 }
 
-},{"@babel/runtime/helpers/defineProperty":"4x6r7","@solana/web3.js":"KgPXe","@toruslabs/base-controllers":"bWbve","@toruslabs/http-helpers":"71C66","@toruslabs/openlogin-jrpc":"hHcJo","eth-rpc-errors":"apfts","is-stream":"lRSJS","pump":"d2HVR","loglevel":"7kRFs","fast-deep-equal":"ixZYU","buffer":"37L3E","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4x6r7":[function(require,module,exports) {
-function _defineProperty(obj, key, value) {
-    if (key in obj) Object.defineProperty(obj, key, {
-        value: value,
-        enumerable: true,
-        configurable: true,
-        writable: true
-    });
-    else obj[key] = value;
-    return obj;
-}
-module.exports = _defineProperty, module.exports.__esModule = true, module.exports["default"] = module.exports;
-
-},{}],"KgPXe":[function(require,module,exports) {
+},{"@babel/runtime/helpers/defineProperty":"4x6r7","@solana/web3.js":"KgPXe","@toruslabs/base-controllers":"bWbve","@toruslabs/http-helpers":"71C66","@toruslabs/openlogin-jrpc":"hHcJo","eth-rpc-errors":"apfts","is-stream":"lRSJS","pump":"d2HVR","loglevel":"7kRFs","fast-deep-equal":"ixZYU","buffer":"37L3E","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"KgPXe":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "Account", ()=>Account
@@ -19999,8 +19986,8 @@ Object.defineProperty(Duplex.prototype, 'destroyed', {
 // Implement an async ._write(chunk, encoding, cb), and it'll handle all
 // the drain event emission and buffering.
 'use strict';
-var process = require("process");
 var global = arguments[3];
+var process = require("process");
 module.exports = Writable;
 /* <replacement> */ function WriteReq(chunk, encoding, cb) {
     this.chunk = chunk;

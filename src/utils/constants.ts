@@ -29,5 +29,7 @@ export const TOKEN_PROGRAM_ID = new PublicKey(
 
 export const MERCHANT_SECRET_KEY = config.MERCHANT_SECRET_KEY;
 
+export const UPDATE_AUTH = "DREwcQaLUrAA7byEtJ8e4gXfez4nzxgdhzhHpsT7gWZH";
+
 export const PORT = 8000;
 export const MINTS_ROUTE = `http://localhost:${PORT}/mints`;

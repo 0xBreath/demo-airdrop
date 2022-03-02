@@ -7,7 +7,8 @@ import {
 } from '@solana/spl-token';
 import { 
     TOKEN_METADATA_PROGRAM_ID,
-    MINTS_ROUTE
+    MINTS_ROUTE,
+    UPDATE_AUTH
 } from '../utils/constants';
 import { 
     getAssociatedTokenAddress,
@@ -15,6 +16,8 @@ import {
     getOrCreateAssociatedTokenAccount
 } from '@solana/spl-token';
 import * as anchor from '@project-serum/anchor';
+import * as metadata from '@metaplex-foundation/mpl-token-metadata';
+const Metadata = metadata.Metadata;
 
 
 export const transferMint = async (
@@ -172,34 +175,46 @@ export const InitMerchant = async (
     let balance;
     let i = 0;
 
-    accounts.forEach(async (
-        account: any
-    ) => {
+    for (let x = 0; x < accounts.length; x++) {
+        let account = accounts[x]
+
+        // @ts-ignore
         balance = account.account.data["parsed"]["info"]["tokenAmount"]["amount"];
         if (balance == 1) {
-            i += 1;
+            // @ts-ignore
             mint = account.account.data["parsed"]["info"]["mint"];
 
-            // POST mint to server if in merchant wallet (balance == 1)
-            const item = {
-                mint: mint,
-                used: false,
-                trx: null
-            }
-            const mintRoute = MINTS_ROUTE + '/' + mint.toString()
+            const metadataKey = await Metadata.getPDA(new PublicKey(mint));
+            const metadata = await Metadata.load(connection, metadataKey);
+            //console.log('METADATA => ', metadata)
+            const updateAuth = metadata.data.updateAuthority;
+            //console.log('updateAuth => ', updateAuth)
 
-            await fetch(mintRoute, {
-                method: 'POST',
-                headers: {
-                    'Content-Type':'application/json',
-                    'Accept':'application/json'
-                },
-                body: JSON.stringify(item)
-            })
+            if (updateAuth == UPDATE_AUTH) {
+                i += 1;
+
+                // POST mint to server if in merchant wallet (balance == 1)
+                const item = {
+                    mint: mint,
+                    used: false,
+                    trx: null
+                }
+                const mintRoute = MINTS_ROUTE + '/' + mint.toString()
+
+                await fetch(mintRoute, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type':'application/json',
+                        'Accept':'application/json'
+                    },
+                    body: JSON.stringify(item)
+                })
+            }
         }
-    });
+    }
+
     if (mint) {
-        console.log(`Found ${i} token account(s) for wallet: ${walletString}`)
+        console.log(`Found ${i} valid token account(s) for wallet: ${walletString}`)
     }
     else {
         console.log(`No mints found for wallet: ${walletString}`)
