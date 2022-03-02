@@ -1,7 +1,8 @@
 node_modules
-.parcel
+.parcel-cache
 dist
 yarn-error.log
 config.json
 ./server/node_modules
+./server/config.json
 .parcel

@@ -1,43 +1,78 @@
 
-import {PublicKey} from '@solana/web3.js'
+import {PublicKey, Keypair, Message} from '@solana/web3.js'
+import * as anchor from '@project-serum/anchor';
 import nacl from 'tweetnacl'
+import { decodeUTF8, encodeUTF8 } from "tweetnacl-util";
 import {NextFunction, Request, Response} from "express"
 import * as mints from "../controllers/mints"
 import {Express} from 'express'
 import * as express from 'express'
 import app from '../server'
+import * as config from '../config.json'
+import { nextTick } from 'process';
+const secret = config.MERCHANT_SECRET_KEY;
 
-// verify trx signature on backend before updating User
-const verifyOwnerShip = async (
+const verify = async (
   req: Request, 
   res: Response, 
   next: NextFunction
-) => {
-  if (!req) {
-    return;
-  } else {
+): Promise<any> => {
 
-    const pubkey = new PublicKey(req.params.wallet);
-    const signature = req.body.signature;
-    const signedMsg = req.body.message;
-  
-    const encoder = new TextEncoder()
-    const parsedMessage = encoder.encode(signedMsg)
-    //let parsedSignature = Uint8Array.from(JSON.parse(signature));
-    const parsedSignature = Uint8Array.from(signature.signature.data);
-  
-    const verify = nacl.sign.detached.verify(parsedMessage, parsedSignature, pubkey.toBytes())
-  
-    console.log('verify = ', verify)
-    if (!verify) {
-        res.status(400);
-        res.send("Invalid signed message!")
-        return;
-    }
-  
-    // continue to users.update
-    next();
+  // get Keypair
+  let feePayer: Keypair;
+  feePayer = Keypair.fromSecretKey(
+    Uint8Array.from(
+      secret
+    )
+  );
+  console.log('feePayer = ', feePayer.publicKey.toBase58())
+
+  if (!feePayer) {
+    console.log('Keypair to validate server does not exist!')
+    res.status(400);
+    res.send('Keypair to validate server does not exist!')
+    return;
   }
+
+  // create and sign offline trx to verify request
+  const encoder = new TextEncoder()
+  const decoder = new TextDecoder()
+
+  const msg = 'arbitrary message to verify wallet'
+  const encodedMsg = encoder.encode(msg)
+  const secretBytes = Buffer.from(secret);
+  const signature = nacl.sign.detached(encodedMsg, feePayer.secretKey)
+
+  if (!signature) {
+    console.log('Failed to sign!')
+    res.status(400);
+    res.send('Failed to sign!')
+    return;   
+  }
+
+    console.log('signature: ', signature.toString())
+    console.log('pubkey: ', feePayer.publicKey.toBase58())
+  
+    const encodedSig = Uint8Array.from(signature);
+    
+    if (signature) {
+      const verify = nacl.sign.detached.verify(encodedMsg, encodedSig, feePayer.publicKey.toBytes())
+      console.log('verify: ', verify)
+  
+      if (!verify) {
+          res.status(400);
+          res.send("Invalid signed message!")
+          return;
+      } 
+      else {
+        next();
+      }
+    } 
+    else {
+      res.status(400);
+      res.send("Server validation signature not found!")
+      return;
+    }
 }
 
 export const MintRoutes = (app: Express) => {
@@ -53,13 +88,13 @@ export const MintRoutes = (app: Express) => {
   router.get("/all", mints.allMints);
 
   // Create a new Mint (unused)
-  router.post("/:mint", mints.create);
+  router.post("/:mint", verify, mints.create);
 
   // Retrieve single Mint
   router.get("/:mint", mints.findByMint);
 
   // Update existing Mint (used)
-  router.put("/:mint", mints.update);
+  router.put("/:mint", verify, mints.update);
 
   // redirect all /mints routes to this file
   app.use('/mints', router);

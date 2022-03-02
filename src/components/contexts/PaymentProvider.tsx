@@ -190,29 +190,6 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                     setSignature(signature.signature);
                     setStatus(PaymentStatus.Confirmed);
                     //navigate('/confirmed', { replace: true });
-/*
-                    // get an unused mint from server
-                    const mintToSend = await getMint();
-                    if (mintToSend) {
-                        setMint(mintToSend)
-                        console.log('mint => ', mintToSend.toBase58())
-                        console.log()
-                    }
-
-                    // isolate customer's publickey from trx signature
-                    // setCustomer to customer's publicKey
-                    let user;
-                    let trx;
-                    if (signature) {
-                        trx = await connection.getParsedTransaction(signature.signature)
-                        console.log('trx = ', trx)
-                    }
-                    if (trx) {
-                        user = trx.transaction.message.accountKeys[0].pubkey
-                        console.log('customer = ', user.toBase58())
-                        setCustomer(user)
-                    } 
-*/
                 }
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -269,6 +246,10 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
                         setMint(mintToSend)
                         console.log('mint => ', mintToSend.toBase58())
                         console.log()
+                    }
+                    // no mints remaining
+                    else {
+                        console.log('## NO MINTS')
                     }
 
                     // isolate customer's publickey from trx signature

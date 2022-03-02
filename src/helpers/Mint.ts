@@ -14,7 +14,7 @@ import {
     createTransferInstruction,
     getOrCreateAssociatedTokenAccount
 } from '@solana/spl-token';
-import { web3 } from '@project-serum/anchor';
+import * as anchor from '@project-serum/anchor';
 
 
 export const transferMint = async (
@@ -28,7 +28,7 @@ export const transferMint = async (
     console.log('transfer mint -> ' , mint.toBase58())
     console.log('transfer customer -> ', customer.toBase58())
 
-    const trx = new web3.Transaction();
+    const trx = new anchor.web3.Transaction();
 
     // merchant's ATA currently holding mint
     const fromATA = await getOrCreateAssociatedTokenAccount(
@@ -86,11 +86,11 @@ export const transferMint = async (
 
 
 export const getTokenWallet = async (
-  wallet: web3.PublicKey,
-  mint: web3.PublicKey
+  wallet: anchor.web3.PublicKey,
+  mint: anchor.web3.PublicKey
 ) => {
   return (
-    await web3.PublicKey.findProgramAddress(
+    await anchor.web3.PublicKey.findProgramAddress(
       [wallet.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
       ASSOCIATED_TOKEN_PROGRAM_ID
     )
@@ -128,7 +128,6 @@ export const getMint = async (trx: string): Promise<PublicKey | null> => {
     }
 
     if (mint) {      
-        console.log('trx.....')   
         // update merchant mints on server
         // adds transferred mint to list of used NFTs
         const route = MINTS_ROUTE + `/${mint}`
@@ -142,6 +141,7 @@ export const getMint = async (trx: string): Promise<PublicKey | null> => {
         })
         return new PublicKey(mint);
     } else {
+        console.log('No mints remaining!')
         return null;
     }
 };
